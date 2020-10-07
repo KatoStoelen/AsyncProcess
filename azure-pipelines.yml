@@ -1,0 +1,57 @@
+variables:
+- ${{ if eq(variables['Build.SourceBranch'], 'refs/heads/master') }}:
+  - group: Stable
+- ${{ if ne(variables['Build.SourceBranch'], 'refs/heads/master') }}:
+  - group: Non-Stable
+
+jobs:
+  - job: ci_linux
+    displayName: 'CI (Linux)'
+    dependsOn: []
+    condition: eq(variables['BuildLinux'], 'true')
+    pool:
+      vmImage: 'ubuntu-latest'
+    steps:
+      - bash: ./build.sh --target=$(Cake.Unix.Target) --configuration=$(Configuration) --build-number=$(BuildNumber) --verbosity=$(Cake.Verbosity)
+        displayName: 'Run build.sh'
+  - job: ci_macOS
+    displayName: 'CI (macOS)'
+    dependsOn: []
+    condition: eq(variables['BuildMacOS'], 'true')
+    pool:
+      vmImage: 'macOS-latest'
+    steps:
+      - bash: ./build.sh --target=$(Cake.Unix.Target) --configuration=$(Configuration) --build-number=$(BuildNumber) --verbosity=$(Cake.Verbosity)
+        displayName: 'Run build.sh'
+  - job: ci_windows
+    displayName: 'CI (Windows)'
+    dependsOn:
+      - ci_linux
+      - ci_macOS
+    condition: and(succeeded(), eq(variables['BuildWindows'], 'true'))
+    pool:
+      vmImage: 'windows-latest'
+    variables:
+      pullRequestNumber: $[coalesce(variables['System.PullRequest.PullRequestNumber'], '')]
+    steps:
+      - task: PowerShell@2
+        displayName: 'Run build.ps1'
+        env:
+          NUGET_API_KEY: $(NuGetApiKey)
+          GITHUB_PAT: $(GitHubPat)
+        inputs:
+          targetType: 'filePath'
+          filepath: $(System.DefaultWorkingDirectory)\build.ps1
+          pwsh: true
+          arguments: >
+            -Target $(Cake.Target)
+            -Verbosity $(Cake.Verbosity)
+            --configuration=$(Configuration)
+            --build-number=$(BuildNumber)
+            --pr-number=$(pullRequestNumber)
+            --nuget-feed=$(NuGetFeed)
+            --nuget-user-name=$(NuGetUserName)
+            --nuget-api-key=$env:NUGET_API_KEY
+            --github-repo-name=$(Build.Repository.Name)
+            --github-repo-owner=$(GitHubRepositoryOwner)
+            --github-pat=$env:GITHUB_PAT

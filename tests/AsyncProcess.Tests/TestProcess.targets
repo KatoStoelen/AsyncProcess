@@ -1,0 +1,27 @@
+<Project>
+
+  <ItemDefinitionGroup>
+    <TestProcess>
+      <ReferenceOutputAssembly>false</ReferenceOutputAssembly>
+      <SkipGetTargetFrameworkProperties>true</SkipGetTargetFrameworkProperties>
+      <UndefineProperties>TargetFramework;TargetFrameworks</UndefineProperties>
+      <Private>false</Private>
+      <OutputItemType>_TestProcessReference</OutputItemType>
+    </TestProcess>
+  </ItemDefinitionGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="@(TestProcess)" />
+  </ItemGroup>
+
+  <Target Name="ResolveTestProcessReferences"
+          BeforeTargets="CoreCompile;GetAssemblyAttributes"
+          DependsOnTargets="ResolveProjectReferences">
+    <ItemGroup>
+      <AssemblyAttribute Include="AsyncProcess.Tests.TestProcessAttribute">
+        <_Parameter1>%(_TestProcessReference.FullPath)</_Parameter1>
+      </AssemblyAttribute>
+    </ItemGroup>
+  </Target>
+
+</Project>
